@@ -1,0 +1,46 @@
+diff --git BUILD.bazel BUILD.bazel
+new file mode 100644
+index 0000000..8c4cb01
+--- /dev/null
++++ BUILD.bazel
+@@ -0,0 +1,40 @@
++load(
++    "@cmake_configure_file//:cmake_configure_file.bzl",
++    "cmake_configure_file",
++)
++
++cmake_configure_file(
++    name = "config",
++    src = "include/fastcdr/config.h.in",
++    out = "include/fastcdr/config.h",
++    cmakelists = [
++        "CMakeLists.txt",
++    ],
++    defines = [
++        "__BIG_ENDIAN__=0",
++        "HAVE_CXX0X",
++        "HAVE_CXX11",
++        "HAVE_CXX_CONSTEXPR",
++        "PROJECT_VERSION=1.0.7",
++        "PROJECT_VERSION_MAJOR=1",
++        "PROJECT_VERSION_MINOR=0",
++        "PROJECT_VERSION_PATCH=7",
++    ],
++    visibility = ["//visibility:private"],
++)
++
++cc_library(
++    name = "fastcdr",
++    hdrs = glob([
++        "include/**/*.h",
++        "include/**/*.hpp"
++    ]) + [
++        ":config",
++    ],
++    srcs = glob([
++        "src/cpp/*.cpp",
++        "src/cpp/exceptions/*.cpp",
++    ]),
++    strip_include_prefix = "include",
++    visibility = ["//visibility:public"],
++)

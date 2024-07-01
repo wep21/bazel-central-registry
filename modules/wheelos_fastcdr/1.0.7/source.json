@@ -1,0 +1,11 @@
+{
+    "integrity": "sha256-wgLgHPpi+BFwfpP/QqiSffEvI/hBOd76L1yZxJJMIDM=",
+    "patch_strip": 0,
+    "patches": {
+        "add_build_file.patch": "sha256-YuzbWpDV+8H2bqd3KiO7aAJUaPpa4uMw/vT85MZczns=",
+        "fastcdr.patch": "sha256-oDEks79HKqEgSJTIPMH/uHtvBWNcDnsKWr+TmYkKo9Y=",
+        "module_dot_bazel.patch": "sha256-LdFbo5fZHKdGp3ms11sH+JX0p2qV+oWmScmlvStVBLE="
+    },
+    "strip_prefix": "Fast-CDR-1.0.7",
+    "url": "https://github.com/eProsima/Fast-CDR/archive/refs/tags/v1.0.7.tar.gz"
+}

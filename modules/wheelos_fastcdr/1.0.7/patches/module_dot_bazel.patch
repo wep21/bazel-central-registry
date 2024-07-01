@@ -1,0 +1,16 @@
+diff --git MODULE.bazel MODULE.bazel
+new file mode 100644
+index 0000000..10a26a7
+--- /dev/null
++++ MODULE.bazel
+@@ -0,0 +1,10 @@
++module(
++    name = "wheelos_fastcdr",
++    version = "1.0.7",
++    compatibility_level = 1,
++)
++
++bazel_dep(
++    name = "cmake_configure_file",
++    version = "0.1.0",
++)

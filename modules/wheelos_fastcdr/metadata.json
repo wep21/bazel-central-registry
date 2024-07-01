@@ -1,0 +1,17 @@
+{
+    "homepage": "https://github.com/eProsima/Fast-CDR",
+    "maintainers": [
+        {
+            "email": "daisuke.nishimatsu1021@gmail.com",
+            "github": "wep21",
+            "name": "Daisuke Nishimatsu"
+        }
+    ],
+    "repository": [
+        "github:eProsima/Fast-CDR"
+    ],
+    "versions": [
+        "1.0.7"
+    ],
+    "yanked_versions": {}
+}
