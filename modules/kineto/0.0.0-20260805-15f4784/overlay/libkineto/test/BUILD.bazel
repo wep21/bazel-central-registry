@@ -1,0 +1,100 @@
+# The tests that upstream registers with ctest (libkineto/test/CMakeLists.txt)
+# for the CPU-only backend (KINETO_BACKEND=cpu), which is how upstream's CPU CI
+# runs them (.github/scripts/kineto_build_test.sh cpu). The CUPTI, ROCm and XPU
+# tests (Cupti*Test, DevicePropertiesTest, RocmActivityProfilerTest, xpupti/)
+# need those backends, which @kineto does not build, and their GPUs.
+#
+# This is the root package of the test module (MODULE.bazel here), which uses
+# the parent module's root directory as @kineto through local_path_override.
+load("@kineto//:defs.bzl", "KINETO_COPTS")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
+# The tests (and their helpers) that upstream builds only if(NOT WIN32), since
+# they use POSIX APIs (unistd.h, setenv, mkstemps).
+_NOT_WINDOWS = select({
+    "@platforms//os:windows": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+# The test helpers, which the tests include as "test/<header>" (relative to
+# libkineto/).
+cc_library(
+    name = "test_utils",
+    testonly = True,
+    srcs = ["TestUtils.cpp"],
+    hdrs = ["TestUtils.h"],
+    copts = KINETO_COPTS,
+    include_prefix = "test",
+    target_compatible_with = _NOT_WINDOWS,
+    deps = ["@kineto//:private_headers"],
+)
+
+cc_library(
+    name = "mock_cpu_activity_buffer",
+    testonly = True,
+    srcs = ["MockCpuActivityBuffer.cpp"],
+    hdrs = ["MockCpuActivityBuffer.h"],
+    copts = KINETO_COPTS,
+    include_prefix = "test",
+    target_compatible_with = _NOT_WINDOWS,
+    deps = ["@kineto//:private_headers"],
+)
+
+[
+    cc_test(
+        name = name,
+        srcs = ["{}.cpp".format(name)],
+        copts = KINETO_COPTS,
+        target_compatible_with = target_compatible_with,
+        deps = [
+            "@fmt",
+            "@googletest//:gtest_main",
+            "@kineto",
+            "@kineto//:private_headers",
+        ] + deps,
+    )
+    for name, deps, target_compatible_with in [
+        ("ApproximateClockTest", [], []),
+        ("ConfigTest", [], []),
+        ("ConfigLoaderTest", [], []),
+        ("ConfigLoaderPollThreadExceptionTest", [], _NOT_WINDOWS),
+        (
+            "ActivityProfilerControllerTest",
+            [":test_utils"],
+            _NOT_WINDOWS,
+        ),
+        (
+            "AsyncActivityProfilerHandlerTest",
+            [
+                ":test_utils",
+                "@nlohmann_json//:json",
+            ],
+            _NOT_WINDOWS,
+        ),
+        (
+            "AsyncE2ECpuTraceTest",
+            [
+                ":mock_cpu_activity_buffer",
+                ":test_utils",
+                "@nlohmann_json//:json",
+            ],
+            _NOT_WINDOWS,
+        ),
+        ("SyncActivityProfilerHandlerTest", [], _NOT_WINDOWS),
+        ("GenericActivityProfilerTeardownTest", [], _NOT_WINDOWS),
+        ("LoggerObserverTest", [], []),
+        ("RegisterLoggerFactoryTest", [], []),
+        ("PidInfoTest", [], []),
+        ("TypedMetadataTest", [], []),
+        ("GenericTraceActivityMetadataTest", [], []),
+        (
+            "OutputJsonTest",
+            [
+                ":test_utils",
+                "@nlohmann_json//:json",
+            ],
+            _NOT_WINDOWS,
+        ),
+    ]
+]

@@ -1,0 +1,18 @@
+{
+    "url": "https://github.com/pytorch/kineto/archive/15f4784a3471d4db8b31720d528f2f57cd2b1f40.tar.gz",
+    "integrity": "sha256-JfPYaohmmLB7LxHiIHiVjZ2rnYZV1VyIfdWV0x649ZU=",
+    "strip_prefix": "kineto-15f4784a3471d4db8b31720d528f2f57cd2b1f40",
+    "patch_strip": 1,
+    "patches": {
+        "demangle_cstdlib.patch": "sha256-g9/Uk/YUrHVK5NNG9ePQQr9o3x+3ysT0SomRLsIdl84=",
+        "config_loader_lost_wakeup.patch": "sha256-idZsbv/hKmrAlmY/7zgMtKy1ZDRnhcwOp8EIy+Q3M1Y="
+    },
+    "overlay": {
+        ".bazelignore": "sha256-GDm/AaMYU/oXT7EaPxvHWH+/abjfVzDiaJzOFPS9rzk=",
+        "BUILD.bazel": "sha256-K33A3oAIfNBTw5nrxLuwbH3yAyYl5GulX5lmYPS1uuE=",
+        "MODULE.bazel": "sha256-dkhsH+A/0xjUhRJTVlJPsaOr/GnSwIchnyXF0bGLXC4=",
+        "defs.bzl": "sha256-cwLHJl9sbkJlbgNRktPhGTVnS+iPoxOFFXQWZ3H8BO8=",
+        "libkineto/test/BUILD.bazel": "sha256-qXCXb/iQk2IgHmx9dE3X2bxQ97uzbgFYYGFuWBbrIMs=",
+        "libkineto/test/MODULE.bazel": "sha256-AVlRH4WN8ExZfqrEm3uU3YBshhfOpHTCPNH9vPICmZk="
+    }
+}

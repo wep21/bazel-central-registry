@@ -1,0 +1,85 @@
+# Bazel build of libkineto (libkineto/CMakeLists.txt), PyTorch's profiler
+# library, with its CPU-only backend (KINETO_BACKEND=cpu): no CUPTI (CUDA),
+# rocprofiler-sdk (ROCm) or PTI (XPU). The source list comes from
+# libkineto/libkineto_defs.bzl, which the CMake build reads too.
+load("@package_metadata//licenses/rules:license.bzl", "license")
+load("@package_metadata//purl:purl.bzl", "purl")
+load("@package_metadata//rules:package_metadata.bzl", "package_metadata")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("//:libkineto/libkineto_defs.bzl", "get_libkineto_cpu_only_srcs")
+load(":defs.bzl", "KINETO_COPTS", "KINETO_LINKOPTS")
+
+package(default_package_metadata = [":package_metadata"])
+
+license(
+    name = "license",
+    kind = "@package_metadata//licenses/spdx:BSD-3-Clause",
+    text = "LICENSE",
+)
+
+package_metadata(
+    name = "package_metadata",
+    attributes = [":license"],
+    purl = purl.bazel(
+        module_name(),
+        module_version(),
+    ),
+    visibility = ["//visibility:public"],
+)
+
+exports_files(["LICENSE"])
+
+# libkineto's public headers. PyTorch's profiler includes some of them (e.g.
+# <ActivityType.h>) even when it is built without Kineto (USE_KINETO).
+cc_library(
+    name = "kineto_headers",
+    hdrs = glob(["libkineto/include/*.h"]),
+    includes = ["libkineto/include"],
+    visibility = ["//visibility:public"],
+)
+
+# dynolog's IPC fabric (on-demand tracing by the dynolog daemon), which is
+# header-only.
+cc_library(
+    name = "dynolog_headers",
+    hdrs = glob(["libkineto/third_party/dynolog_headers/dynolog/src/ipcfabric/*.h"]),
+    includes = [
+        "libkineto/third_party/dynolog_headers",
+        "libkineto/third_party/dynolog_headers/dynolog/src/ipcfabric",
+    ],
+)
+
+cc_library(
+    name = "kineto",
+    srcs = ["libkineto/" + src for src in get_libkineto_cpu_only_srcs()] + glob([
+        "libkineto/src/*.h",
+    ]),
+    copts = KINETO_COPTS,
+    # The CMake build's KINETO_DEFINITIONS, which are public.
+    defines = [
+        "ENABLE_IPC_FABRIC",
+        "KINETO_NAMESPACE=libkineto",
+    ],
+    # One of the CMake build's (public) include directories, from which
+    # dynolog's headers include libkineto's "Logger.h".
+    includes = ["libkineto/src"],
+    linkopts = KINETO_LINKOPTS,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":dynolog_headers",
+        ":kineto_headers",
+        "@fmt",
+    ],
+)
+
+# libkineto's private headers, for the test module (libkineto/test/), whose
+# tests include them, and the public ones, as "src/<header>" and
+# "include/<header>" (relative to libkineto/, as libkineto/test/CMakeLists.txt
+# does with include_directories(${LIBKINETO_DIR})).
+cc_library(
+    name = "private_headers",
+    hdrs = glob(["libkineto/src/*.h"]),
+    includes = ["libkineto"],
+    visibility = ["//visibility:public"],
+    deps = [":kineto"],
+)

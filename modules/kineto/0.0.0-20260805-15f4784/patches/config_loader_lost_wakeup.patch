@@ -1,0 +1,20 @@
+Backport of the lost-wakeup fix in ConfigLoader::updateConfigThread() from
+upstream commit 2d7d08c3f715 (https://github.com/pytorch/kineto/pull/1531).
+
+stopThread() sets stopFlag_ before it notifies, so a notify that lands while
+the poll thread is still on its way into the bare wait_for() goes unheard, and
+the join waits for a full poll interval (300 s). It makes
+ConfigLoaderPollThreadExceptionTest time out under Bazel's default test timeout.
+
+--- a/libkineto/src/ConfigLoader.cpp
++++ b/libkineto/src/ConfigLoader.cpp
+@@ -252,7 +252,8 @@
+         system_clock::now();
+     if (interval.count() > 0) {
+       std::unique_lock<std::mutex> lock(updateThreadMutex_);
+-      updateThreadCondVar_.wait_for(lock, interval);
++      updateThreadCondVar_.wait_for(
++          lock, interval, [this] { return stopFlag_.load(); });
+     }
+     if (stopFlag_) {
+       break;
