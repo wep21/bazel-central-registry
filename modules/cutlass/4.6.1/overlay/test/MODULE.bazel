@@ -1,0 +1,27 @@
+"""Upstream CUTLASS tests, run against the parent module."""
+
+bazel_dep(name = "cutlass")
+local_path_override(
+    module_name = "cutlass",
+    path = "..",
+)
+
+bazel_dep(name = "googletest", version = "1.18.0.bcr.1")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_cc", version = "0.2.27")
+bazel_dep(name = "rules_cuda", version = "0.3.0")
+
+# The host-only tests still include CUDA runtime headers, so fetch them from
+# NVIDIA's redistributables. Nothing is compiled for, or run on, a GPU.
+cuda = use_extension("@rules_cuda//cuda:extensions.bzl", "toolchain")
+cuda.redist_json(
+    name = "cuda_redist_json",
+    components = [
+        "cccl",
+        "cudart",
+        "nvcc",
+    ],
+    version = "12.9.1",
+)
+cuda.toolkit(name = "cuda")
+use_repo(cuda, "cuda")

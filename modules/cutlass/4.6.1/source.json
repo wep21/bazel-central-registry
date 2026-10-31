@@ -1,0 +1,12 @@
+{
+    "url": "https://github.com/NVIDIA/cutlass/archive/refs/tags/v4.6.1.tar.gz",
+    "integrity": "sha256-RV2bo31XyyFNZ7XRpgcEQSRLN4vKyy6RbDuG8qmwLhw=",
+    "strip_prefix": "cutlass-4.6.1",
+    "overlay": {
+        ".bazelignore": "sha256-8sobtsfpB9Btr+Roflefznazfk6Tt2BQItpS5szCb9I=",
+        "BUILD.bazel": "sha256-ToaLmhoSA/XCMa4Z15F0UfUVrwmS66Oh5QVmkAoS8UU=",
+        "MODULE.bazel": "sha256-paByC1qI80a9ZeyOK2eiEOgp70W6mStLKbegmeILiJY=",
+        "test/BUILD.bazel": "sha256-j8IOe4RMBPJMJdcp3ghdAbmYmUeHxtwlu1UymH6/Lis=",
+        "test/MODULE.bazel": "sha256-xNwJXK59BHBV5VPVwHaMPzttyd/uW4yzUafiSpNdq+g="
+    }
+}

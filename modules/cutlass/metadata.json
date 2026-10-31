@@ -2,8 +2,15 @@
     "homepage": "https://github.com/NVIDIA/cutlass",
     "maintainers": [
         {
-            "email": "bcr-maintainers@bazel.build",
-            "name": "No Maintainer Specified"
+            "email": "andrew.c.symington@gmail.com",
+            "github": "asymingt",
+            "github_user_id": 37671,
+            "name": "Andrew Symington"
+        },
+        {
+            "github": "wep21",
+            "github_user_id": 42202095,
+            "name": "Daisuke Nishimatsu"
         }
     ],
     "repository": [
@@ -11,7 +18,8 @@
     ],
     "versions": [
         "3.5.1",
-        "4.2.1"
+        "4.2.1",
+        "4.6.1"
     ],
     "yanked_versions": {}
 }

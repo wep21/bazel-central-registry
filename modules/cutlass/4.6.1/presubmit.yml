@@ -1,0 +1,44 @@
+matrix:
+  platform:
+  - debian11
+  - ubuntu2204
+  - ubuntu2404
+  - macos
+  - macos_arm64
+  - windows
+  bazel:
+  - rolling
+  - 9.x
+  - 8.x
+tasks:
+  verify_targets:
+    name: Verify build targets
+    platform: ${{ platform }}
+    bazel: ${{ bazel }}
+    build_targets:
+    - '@cutlass//:cutlass'
+    - '@cutlass//:tools_util'
+bcr_test_module:
+  module_path: test
+  matrix:
+    # The tests need the CUDA headers, which NVIDIA only redistributes for
+    # Linux and Windows, and upstream only supports MSVC through nvcc.
+    platform:
+    - debian11
+    - ubuntu2204
+    - ubuntu2404
+    bazel:
+    - rolling
+    - 9.x
+    - 8.x
+  tasks:
+    run_test_module:
+      name: Run upstream tests
+      platform: ${{ platform }}
+      bazel: ${{ bazel }}
+      # Upstream builds in Release mode by default, and ArraySubbyte trips an
+      # assert() that only fires without NDEBUG.
+      test_flags:
+      - '--compilation_mode=opt'
+      test_targets:
+      - '//...'

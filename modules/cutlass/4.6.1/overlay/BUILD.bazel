@@ -1,0 +1,55 @@
+# Header-only CUTLASS and CuTe, as upstream's CUTLASS (include/) and
+# cutlass_tools_util_includes (tools/util/include) CMake targets.
+load("@package_metadata//licenses/rules:license.bzl", "license")
+load("@package_metadata//purl:purl.bzl", "purl")
+load("@package_metadata//rules:package_metadata.bzl", "package_metadata")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+package(default_package_metadata = [":package_metadata"])
+
+license(
+    name = "license",
+    kind = "@package_metadata//licenses/spdx:BSD-3-Clause",
+    text = "LICENSE.txt",
+)
+
+package_metadata(
+    name = "package_metadata",
+    attributes = [":license"],
+    purl = purl.bazel(
+        module_name(),
+        module_version(),
+    ),
+    visibility = ["//visibility:public"],
+)
+
+exports_files(["LICENSE.txt"])
+
+filegroup(
+    name = "all",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "cutlass",
+    hdrs = glob([
+        "include/**/*.h",
+        "include/**/*.hpp",
+        "include/**/*.inl",
+    ]),
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+
+# Host-side utilities, e.g. <cutlass/util/packed_stride.hpp>.
+cc_library(
+    name = "tools_util",
+    hdrs = glob([
+        "tools/util/include/**/*.h",
+        "tools/util/include/**/*.hpp",
+    ]),
+    strip_include_prefix = "tools/util/include",
+    visibility = ["//visibility:public"],
+    deps = [":cutlass"],
+)

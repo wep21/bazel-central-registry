@@ -1,0 +1,51 @@
+# The unit tests that upstream builds without CUDA (WITHOUT_CUDA in
+# unit/cute/core/CMakeLists.txt): the CuTe core tests, which only need a host
+# compiler and the CUDA headers. Every other upstream test runs CUDA kernels.
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
+cc_library(
+    name = "cutlass_unit_test",
+    testonly = True,
+    hdrs = ["unit/common/cutlass_unit_test.h"],
+    strip_include_prefix = "unit/common",
+    deps = [
+        "@cuda//:cuda_headers",
+        "@cutlass",
+        "@googletest//:gtest",
+    ],
+)
+
+cc_test(
+    name = "cutlass_test_unit_cute_core",
+    srcs = ["unit/cute/core/{}.cpp".format(src) for src in [
+        "array_subbyte",
+        "bitfield",
+        "coalesce",
+        "compact_xmajor",
+        "compare",
+        "complement",
+        "composition",
+        "constants",
+        "core_unit",
+        "domain_distribute",
+        "int_tuple",
+        "inverse_left",
+        "inverse_right",
+        "logical_divide",
+        "logical_product",
+        "math",
+        "mixedbits",
+        "nullspace",
+        "pointer",
+        "reverse",
+        "swizzle_layout",
+        "tensor_algs",
+        "tuple",
+    ]],
+    copts = ["-std=c++17"],
+    # NVIDIA's CUDA redistributables only exist for Linux and Windows, and
+    # upstream only supports MSVC with CUDA's nvcc.
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [":cutlass_unit_test"],
+)
