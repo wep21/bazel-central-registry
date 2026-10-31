@@ -1,0 +1,305 @@
+# The tests that upstream registers with ctest for libsleef
+# (src/libm-tester/CMakeLists.txt) on x86_64 and AArch64:
+#
+# - iut, iut<extension>, iuty<extension> (the DETERMINISTIC functions) and, on
+#   x86_64, iutdsp128 and iutdsp256: `tester <iut>`, where tester checks the
+#   accuracy of every function of the iut program against MPFR, over pipes.
+#   An iut program for an extension that the CPU lacks reports so, and tester
+#   then passes.
+# - tester3<extension>: checks the MD5 hashes of the outputs of every function
+#   against hash_cinz.txt or hash_finz.txt (TEST3_CINZ, TEST3_FINZ).
+#
+# Not ported, because this module does not build what they test: iutscalar
+# (SLEEF_BUILD_SCALAR_LIB), iuti<extension> and iutcuda (the inline headers,
+# CUDA), and gnuabi_compatibility_*, testervecabi, mveclibtest-* and autovec-*
+# (the GNU ABI library; the last two also need OpenMP and FileCheck). The
+# tester2* programs are built upstream but not registered with ctest: they run
+# until they have found 1000 errors.
+#
+# This is the root package of the test module (MODULE.bazel here), which uses
+# the source tree two levels up as @sleef through local_path_override.
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("@sleef//:sleef.bzl", "SLEEF_COPTS", "SLEEF_DEFINES", "sleef_extension_copts")
+
+# The CMAKE_C_FLAGS of the testers add FLAGS_NOSTRICTALIASING.
+_COPTS = SLEEF_COPTS + ["-fno-strict-aliasing"]
+
+_DEPS = [
+    "@sleef",
+    "@sleef//:internal_headers",
+]
+
+# The extensions that libsleef has (SLEEF_SUPPORTED_LIBM_EXTENSIONS), with
+# where they are built, and the definitions of tester3<extension>
+# (TESTER3_DEFINITIONS_<extension>, without the extensions that are not in
+# TEST3_CINZ or TEST3_FINZ).
+_EXTENSIONS = {
+    "AVX512FNOFMA": (
+        ["@platforms//cpu:x86_64"],
+        [
+            "ATR=cinz_",
+            "DPTYPE=__m512d",
+            "SPTYPE=__m512",
+            "DPTYPESPEC=d8",
+            "SPTYPESPEC=f16",
+            "EXTSPEC=avx512fnofma",
+        ],
+    ),
+    "AVX512F": (
+        ["@platforms//cpu:x86_64"],
+        [
+            "ATR=finz_",
+            "DPTYPE=__m512d",
+            "SPTYPE=__m512",
+            "DPTYPESPEC=d8",
+            "SPTYPESPEC=f16",
+            "EXTSPEC=avx512f",
+        ],
+    ),
+    "AVX2": (
+        ["@platforms//cpu:x86_64"],
+        [
+            "ATR=finz_",
+            "DPTYPE=__m256d",
+            "SPTYPE=__m256",
+            "DPTYPESPEC=d4",
+            "SPTYPESPEC=f8",
+            "EXTSPEC=avx2",
+        ],
+    ),
+    "AVX2128": (
+        ["@platforms//cpu:x86_64"],
+        [
+            "ATR=finz_",
+            "DPTYPE=__m128d",
+            "SPTYPE=__m128",
+            "DPTYPESPEC=d2",
+            "SPTYPESPEC=f4",
+            "EXTSPEC=avx2128",
+        ],
+    ),
+    "FMA4": (
+        ["@platforms//cpu:x86_64"],
+        None,
+    ),
+    "AVX": (
+        ["@platforms//cpu:x86_64"],
+        [
+            "ATR=cinz_",
+            "DPTYPE=__m256d",
+            "SPTYPE=__m256",
+            "DPTYPESPEC=d4",
+            "SPTYPESPEC=f8",
+            "EXTSPEC=avx",
+        ],
+    ),
+    "SSE4": (
+        ["@platforms//cpu:x86_64"],
+        [
+            "ATR=cinz_",
+            "DPTYPE=__m128d",
+            "SPTYPE=__m128",
+            "DPTYPESPEC=d2",
+            "SPTYPESPEC=f4",
+            "EXTSPEC=sse4",
+        ],
+    ),
+    "SSE2": (
+        ["@platforms//cpu:x86_64"],
+        [
+            "ATR=cinz_",
+            "DPTYPE=__m128d",
+            "SPTYPE=__m128",
+            "DPTYPESPEC=d2",
+            "SPTYPESPEC=f4",
+            "EXTSPEC=sse2",
+        ],
+    ),
+    # Configure.cmake disables SVE on Darwin.
+    "SVENOFMA": (
+        [
+            "@platforms//cpu:aarch64",
+            "@platforms//os:linux",
+        ],
+        [
+            "ATR=cinz_",
+            "DPTYPE=svfloat64_t",
+            "SPTYPE=svfloat32_t",
+            "DPTYPESPEC=dx",
+            "SPTYPESPEC=fx",
+            "EXTSPEC=svenofma",
+        ],
+    ),
+    "SVE": (
+        [
+            "@platforms//cpu:aarch64",
+            "@platforms//os:linux",
+        ],
+        [
+            "ATR=finz_",
+            "DPTYPE=svfloat64_t",
+            "SPTYPE=svfloat32_t",
+            "DPTYPESPEC=dx",
+            "SPTYPESPEC=fx",
+            "EXTSPEC=sve",
+        ],
+    ),
+    "ADVSIMDNOFMA": (
+        ["@platforms//cpu:aarch64"],
+        [
+            "ATR=cinz_",
+            "DPTYPE=float64x2_t",
+            "SPTYPE=float32x4_t",
+            "DPTYPESPEC=d2",
+            "SPTYPESPEC=f4",
+            "EXTSPEC=advsimdnofma",
+        ],
+    ),
+    "ADVSIMD": (
+        ["@platforms//cpu:aarch64"],
+        [
+            "ATR=finz_",
+            "DPTYPE=float64x2_t",
+            "SPTYPE=float32x4_t",
+            "DPTYPESPEC=d2",
+            "SPTYPESPEC=f4",
+            "EXTSPEC=advsimd",
+        ],
+    ),
+    "PUREC_SCALAR": (
+        [],
+        [
+            "ATR=cinz_",
+            "DPTYPE=double",
+            "SPTYPE=float",
+            "DPTYPESPEC=d1",
+            "SPTYPESPEC=f1",
+            "EXTSPEC=purec",
+        ],
+    ),
+    "PURECFMA_SCALAR": (
+        [],
+        [
+            "ATR=finz_",
+            "DPTYPE=double",
+            "SPTYPE=float",
+            "DPTYPESPEC=d1",
+            "SPTYPESPEC=f1",
+            "EXTSPEC=purecfma",
+        ],
+    ),
+}
+
+# tester, which runs the iut program that its first argument names.
+cc_library(
+    name = "tester",
+    testonly = True,
+    srcs = [
+        "tester.c",
+        "testerutil.c",
+        "testerutil.h",
+    ],
+    copts = _COPTS + ["-Wno-unused-result"],
+    local_defines = SLEEF_DEFINES + ["USEMPFR=1"],
+    # It starts the iut program with fork() and execvp().
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+    deps = _DEPS + ["@mpfr"],
+    alwayslink = True,
+)
+
+# The iut programs: (name, sources, compiler flags, definitions, where they
+# are built).
+_IUTS = [
+    (
+        "iut",
+        ["iut.c"],
+        [],
+        [],
+        [],
+    ),
+] + [
+    (
+        "iut{}{}".format(
+            "y" if deterministic else "",
+            extension.lower(),
+        ),
+        [
+            "iutsimd.c",
+            "@sleef//:src/common/main_checkfeature.c",
+        ],
+        sleef_extension_copts(extension),
+        ["ENABLE_{}=1".format(extension)] + (["DETERMINISTIC=1"] if deterministic else []),
+        compatibility,
+    )
+    for extension, (compatibility, _) in _EXTENSIONS.items()
+    for deterministic in [
+        False,
+        True,
+    ]
+] + [
+    (
+        "iut" + name,
+        [
+            "iutsimd.c",
+            "@sleef//:src/common/main_checkfeature.c",
+        ],
+        sleef_extension_copts(extension),
+        ["ENABLE_{}=1".format(name.upper())],
+        ["@platforms//cpu:x86_64"],
+    )
+    for name, extension in {
+        "dsp128": "SSE2",
+        "dsp256": "AVX",
+    }.items()
+]
+
+[
+    [
+        cc_binary(
+            name = name + "_bin",
+            testonly = True,
+            srcs = srcs + [
+                "testerutil.c",
+                "testerutil.h",
+            ],
+            copts = _COPTS + copts,
+            local_defines = SLEEF_DEFINES + defines,
+            target_compatible_with = compatibility,
+            deps = _DEPS,
+        ),
+        cc_test(
+            name = name,
+            # tester runs execvp() with this path, which must contain a slash.
+            args = ["./$(rootpath :{}_bin)".format(name)],
+            data = [":{}_bin".format(name)],
+            target_compatible_with = compatibility,
+            deps = [":tester"],
+        ),
+    ]
+    for name, srcs, copts, defines, compatibility in _IUTS
+]
+
+[
+    cc_test(
+        name = "tester3" + extension.lower(),
+        srcs = [
+            "tester3.c",
+            "testerutil.c",
+            "testerutil.h",
+            "@sleef//:src/common/main_checkfeature.c",
+        ],
+        args = ["$(rootpath :hash_{}.txt)".format("cinz" if "ATR=cinz_" in definitions else "finz")],
+        copts = _COPTS + sleef_extension_copts(extension),
+        data = [":hash_{}.txt".format("cinz" if "ATR=cinz_" in definitions else "finz")],
+        local_defines = SLEEF_DEFINES + definitions,
+        target_compatible_with = compatibility,
+        deps = _DEPS + ["@openssl//:crypto"],
+    )
+    for extension, (compatibility, definitions) in _EXTENSIONS.items()
+    if definitions
+]

@@ -1,0 +1,16 @@
+{
+    "url": "https://github.com/shibatch/sleef/archive/refs/tags/3.8.tar.gz",
+    "integrity": "sha256-oSzNUPVwg8Uw4cdvENUoZd770Z/J4shbSDSTBlcJh0o=",
+    "strip_prefix": "sleef-3.8",
+    "overlay": {
+        ".bazelignore": "sha256-hwbwUGomhNpkmWFGkYM/ZaWb0jQKVNGAF16pK97Z21Y=",
+        "BUILD.bazel": "sha256-gIpceyrJk44kdW+CjU6g3iyPpjTqd75PQA1ffysevBA=",
+        "MODULE.bazel": "sha256-evaINw1FPwMhhfIc8opN2Lh+teRq0a/AOs48Ql9449A=",
+        "bazel/BUILD.bazel": "sha256-c98+DHk1uKgkQS4m+6ENkxT5zUBsKqIgBko3IhZuNc8=",
+        "bazel/concat.c": "sha256-Zn2yGCs7i3esGUJYYZmDanBtQCLkocD9SaL65uuXPPc=",
+        "bazel/tool_main.c": "sha256-mmsw8P4ZesorAsgM67w0rNvWR+RLykl7LXB9pvieGbI=",
+        "sleef.bzl": "sha256-CKXRgMrHX6gyoZIt7ivlg3g/gg0E8qqKbo02lSnN0aQ=",
+        "src/libm-tester/BUILD.bazel": "sha256-RzU3qg5nQXh6bOn+0lXuIcuhZcjRVkJ3t2a2kAaX7uc=",
+        "src/libm-tester/MODULE.bazel": "sha256-UpQRqjBFmU1ooDx7wbYGbmF3GWijC785YSGTEVYGrDE="
+    }
+}

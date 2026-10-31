@@ -1,0 +1,12 @@
+"""Upstream SLEEF libm tests (src/libm-tester), run against the parent module."""
+
+bazel_dep(name = "sleef")
+local_path_override(
+    module_name = "sleef",
+    path = "../..",
+)
+
+bazel_dep(name = "mpfr", version = "4.2.2.bcr.3")
+bazel_dep(name = "openssl", version = "3.5.9.bcr.1")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_cc", version = "0.2.27")
