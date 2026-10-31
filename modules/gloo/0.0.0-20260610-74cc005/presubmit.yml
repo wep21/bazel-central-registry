@@ -1,0 +1,44 @@
+matrix:
+  platform:
+  - debian11
+  - ubuntu2204
+  - ubuntu2404
+  - macos
+  - macos_arm64
+  - windows
+  bazel:
+  - rolling
+  - 9.x
+  - 8.x
+tasks:
+  verify_targets:
+    name: Verify build targets
+    platform: ${{ platform }}
+    bazel: ${{ bazel }}
+    build_targets:
+    - '@gloo//:gloo'
+bcr_test_module:
+  module_path: gloo/test
+  matrix:
+    platform:
+    - debian11
+    - ubuntu2204
+    - ubuntu2404
+    - macos
+    - macos_arm64
+    - windows
+    bazel:
+    - rolling
+    - 9.x
+    - 8.x
+  tasks:
+    run_test_module:
+      name: Run upstream tests
+      platform: ${{ platform }}
+      bazel: ${{ bazel }}
+      # Upstream's CI builds its tests optimized (RelWithDebInfo); unoptimized,
+      # broadcast_test takes about seven times as long.
+      test_flags:
+      - '--compilation_mode=opt'
+      test_targets:
+      - '//...'

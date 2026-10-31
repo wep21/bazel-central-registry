@@ -1,0 +1,128 @@
+# The tests that upstream builds into gloo_test (gloo/test/CMakeLists.txt with
+# BUILD_TEST=ON), which its CI runs on Linux and Windows. Upstream links them
+# into one binary; here each source file is its own test. Not ported:
+# - tcp_test.cc: it tests GLOO_HAVE_TRANSPORT_TCP without including
+#   gloo/config.h first, so it compiles to nothing upstream too.
+# - memory_test.cc: its only test is disabled (DISABLED_ManySlotsNoLeaks).
+# - openssl_utils.cc: only for the TCP-TLS transport, which is not built.
+# - The CUDA and ROCm tests, and the sources that CMakeLists.txt does not list
+#   (buffer, context_factory, math, reduce_scatter, scatter and tls_tcp tests).
+#
+# This is the root package of the test module (MODULE.bazel here), which uses
+# the grandparent directory as @gloo through local_path_override. Without the
+# TCP transport (i.e. on macOS and Windows), the tests that are parameterized
+# over TCP skip themselves at runtime ("transport not available").
+load("@gloo//:gloo_config.bzl", "GLOO_COPTS")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
+_LINUX_ONLY = select({
+    "@platforms//os:linux": [],
+    "//conditions:default": ["@platforms//:incompatible"],
+})
+
+cc_library(
+    name = "base_test",
+    testonly = True,
+    srcs = ["base_test.cc"],
+    hdrs = [
+        "base_test.h",
+        "openssl_utils.h",
+    ],
+    copts = GLOO_COPTS,
+    include_prefix = "gloo/test",
+    deps = [
+        "@gloo",
+        "@googletest//:gtest",
+    ],
+)
+
+cc_library(
+    name = "main",
+    testonly = True,
+    srcs = ["main.cc"],
+    copts = GLOO_COPTS,
+    deps = ["@googletest//:gtest"],
+)
+
+[
+    cc_test(
+        name = test,
+        srcs = ["{}.cc".format(test)],
+        copts = GLOO_COPTS,
+        deps = [
+            ":base_test",
+            ":main",
+            "@gloo",
+            "@googletest//:gtest",
+        ],
+    )
+    for test in [
+        "allgather_test",
+        "allgatherv_test",
+        "allreduce_test",
+        "alltoall_test",
+        "alltoallv_test",
+        "barrier_test",
+        "broadcast_test",
+        "gather_test",
+        "gatherv_test",
+        "reduce_test",
+        "remote_key_test",
+        "send_recv_test",
+    ]
+]
+
+# The tests that upstream builds only on Linux, linking librt.
+[
+    cc_test(
+        name = test,
+        srcs = ["{}.cc".format(test)],
+        copts = GLOO_COPTS,
+        linkopts = ["-lrt"],
+        target_compatible_with = _LINUX_ONLY,
+        deps = [
+            ":base_test",
+            ":main",
+            "@gloo",
+            "@googletest//:gtest",
+        ],
+    )
+    for test in [
+        "linux_test",
+        "pair_test",
+    ]
+]
+
+# The fixture of transport_test, which forks a process per rank.
+cc_library(
+    name = "multiproc_test",
+    testonly = True,
+    srcs = ["multiproc_test.cc"],
+    hdrs = ["multiproc_test.h"],
+    copts = GLOO_COPTS,
+    include_prefix = "gloo/test",
+    target_compatible_with = _LINUX_ONLY,
+    deps = [
+        ":base_test",
+        "@gloo",
+        "@googletest//:gtest",
+    ],
+)
+
+# Three of its six tests wait out a 3 s I/O timeout in each of their 54
+# parameter combinations, which adds up to more than 8 minutes when unsharded.
+cc_test(
+    name = "transport_test",
+    srcs = ["transport_test.cc"],
+    copts = GLOO_COPTS,
+    linkopts = ["-lrt"],
+    shard_count = 6,
+    target_compatible_with = _LINUX_ONLY,
+    deps = [
+        ":main",
+        ":multiproc_test",
+        "@gloo",
+        "@googletest//:gtest",
+    ],
+)

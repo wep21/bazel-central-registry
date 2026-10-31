@@ -1,0 +1,134 @@
+# Bazel build of Gloo's CPU library (gloo/CMakeLists.txt and its
+# subdirectories), as PyTorch builds it for c10d's ProcessGroupGloo (static,
+# without Redis, MPI, ibverbs or TLS): with the TCP transport on Linux, and the
+# libuv transport elsewhere. Gloo's CUDA and ROCm collectives are not built.
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@package_metadata//licenses/rules:license.bzl", "license")
+load("@package_metadata//purl:purl.bzl", "purl")
+load("@package_metadata//rules:package_metadata.bzl", "package_metadata")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load(":gloo_config.bzl", "GLOO_CONFIG_SUBSTITUTIONS", "GLOO_COPTS", "GLOO_DEFINES")
+
+package(default_package_metadata = [":package_metadata"])
+
+license(
+    name = "license",
+    kind = "@package_metadata//licenses/spdx:BSD-3-Clause",
+    text = "LICENSE",
+)
+
+package_metadata(
+    name = "package_metadata",
+    attributes = [":license"],
+    purl = purl.bazel(
+        module_name(),
+        module_version(),
+    ),
+    visibility = ["//visibility:public"],
+)
+
+exports_files(["LICENSE"])
+
+# gloo/config.h (see gloo_config.bzl).
+expand_template(
+    name = "config_h",
+    out = "gen/gloo/config.h",
+    substitutions = GLOO_CONFIG_SUBSTITUTIONS,
+    template = "gloo/config.h.in",
+)
+
+cc_library(
+    name = "gloo",
+    srcs = [
+        "gloo/algorithm.cc",
+        "gloo/allgather.cc",
+        "gloo/allgatherv.cc",
+        "gloo/allreduce.cc",
+        "gloo/allreduce_local.cc",
+        "gloo/alltoall.cc",
+        "gloo/alltoallv.cc",
+        "gloo/barrier.cc",
+        "gloo/broadcast.cc",
+        "gloo/common/logging.cc",
+        "gloo/common/utils.cc",
+        "gloo/context.cc",
+        "gloo/gather.cc",
+        "gloo/gatherv.cc",
+        "gloo/reduce.cc",
+        "gloo/rendezvous/context.cc",
+        "gloo/rendezvous/file_store.cc",
+        "gloo/rendezvous/hash_store.cc",
+        "gloo/rendezvous/prefix_store.cc",
+        "gloo/rendezvous/store.cc",
+        "gloo/scatter.cc",
+        "gloo/transport/address.cc",
+        "gloo/transport/buffer.cc",
+        "gloo/transport/context.cc",
+        "gloo/transport/device.cc",
+        "gloo/transport/pair.cc",
+        "gloo/transport/unbound_buffer.cc",
+        "gloo/types.cc",
+    ] + select({
+        "@platforms//os:linux": [
+            "gloo/common/linux.cc",
+            "gloo/transport/tcp/address.cc",
+            "gloo/transport/tcp/buffer.cc",
+            "gloo/transport/tcp/context.cc",
+            "gloo/transport/tcp/debug_logger.cc",
+            "gloo/transport/tcp/device.cc",
+            "gloo/transport/tcp/error.cc",
+            "gloo/transport/tcp/helpers.cc",
+            "gloo/transport/tcp/listener.cc",
+            "gloo/transport/tcp/loop.cc",
+            "gloo/transport/tcp/pair.cc",
+            "gloo/transport/tcp/socket.cc",
+            "gloo/transport/tcp/unbound_buffer.cc",
+        ],
+        "@platforms//os:windows": [
+            "gloo/common/win.cc",
+            ":uv_srcs",
+        ],
+        "//conditions:default": [":uv_srcs"],
+    }),
+    hdrs = glob(
+        [
+            "gloo/*.h",
+            "gloo/common/*.h",
+            "gloo/rendezvous/*.h",
+            "gloo/transport/*.h",
+            "gloo/transport/tcp/*.h",
+            "gloo/transport/uv/*.h",
+        ],
+        exclude = [
+            "gloo/cuda*.h",
+            "gloo/rendezvous/redis_store.h",
+        ],
+    ) + [":config_h"],
+    copts = GLOO_COPTS,
+    defines = GLOO_DEFINES,
+    includes = [
+        ".",
+        "gen",
+    ],
+    linkopts = select({
+        "@platforms//os:linux": ["-pthread"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+    deps = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@libuv"],
+    }),
+)
+
+filegroup(
+    name = "uv_srcs",
+    srcs = [
+        "gloo/transport/uv/address.cc",
+        "gloo/transport/uv/context.cc",
+        "gloo/transport/uv/device.cc",
+        "gloo/transport/uv/libuv.cc",
+        "gloo/transport/uv/pair.cc",
+        "gloo/transport/uv/unbound_buffer.cc",
+    ],
+)

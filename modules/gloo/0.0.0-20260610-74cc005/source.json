@@ -1,0 +1,17 @@
+{
+    "url": "https://github.com/pytorch/gloo/archive/74cc005ae13f69c11d8a41e50b42025b6730e796.tar.gz",
+    "integrity": "sha256-HXJgxkAI5a1DCgH2Pf2Uo+BOpmPyaUo4NPOHe02maDM=",
+    "strip_prefix": "gloo-74cc005ae13f69c11d8a41e50b42025b6730e796",
+    "patch_strip": 1,
+    "patches": {
+        "libcxx_includes.patch": "sha256-h6DlFH6M7I2qEsOVaoGHoPV9w11UWngcB8ck7GKnwlQ="
+    },
+    "overlay": {
+        ".bazelignore": "sha256-vu0mHwSLauAXmy84r+sdBUZLJ3zmb9UcxomJeLlBIGU=",
+        "BUILD.bazel": "sha256-8bkJNmqIp7BhobLthsKppqJtzE+z9V8W2Hu8WrghY2I=",
+        "MODULE.bazel": "sha256-aysd+7d7d7ygpCxEPkqnKH7HYgpiYU7FeO5v6iwouhw=",
+        "gloo/test/BUILD.bazel": "sha256-uNUl+oKV6cSfKqQ5zgmveq96wp0bd6O3tbxh5czvyes=",
+        "gloo/test/MODULE.bazel": "sha256-roxbQLAKkWW8MSLVv1o3eHZG5UUC/LfFDllUoDYqEt0=",
+        "gloo_config.bzl": "sha256-ysiMmj1zGLmnj0hkUn/JJlQeiEbr7HJXn0Kspt61jOg="
+    }
+}
