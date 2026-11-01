@@ -1,0 +1,23 @@
+{
+    "homepage": "https://www.ogre3d.org",
+    "maintainers": [
+        {
+            "email": "andrew.c.symington@gmail.com",
+            "github": "asymingt",
+            "github_user_id": 37671,
+            "name": "Andrew Symington"
+        },
+        {
+            "github": "wep21",
+            "github_user_id": 42202095,
+            "name": "Daisuke Nishimatsu"
+        }
+    ],
+    "repository": [
+        "github:OGRECave/ogre"
+    ],
+    "versions": [
+        "1.12.10"
+    ],
+    "yanked_versions": {}
+}

@@ -1,0 +1,737 @@
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@package_metadata//licenses/rules:license.bzl", "license")
+load("@package_metadata//purl:purl.bzl", "purl")
+load("@package_metadata//rules:package_metadata.bzl", "package_metadata")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_shared_library", "objc_library")
+
+package(
+    default_package_metadata = [":package_metadata"],
+    default_visibility = ["//visibility:public"],
+)
+
+license(
+    name = "license",
+    kind = "@package_metadata//licenses/spdx:MIT",
+    text = "LICENSE",
+)
+
+package_metadata(
+    name = "package_metadata",
+    attributes = [":license"],
+    purl = purl.bazel(
+        module_name(),
+        module_version(),
+    ),
+)
+
+exports_files([
+    "CMake/Templates/resources.cfg.in",
+    "LICENSE",
+])
+
+# OGRE's core media (RTShaderLib shaders, shadow volume and terrain materials,
+# ...), which applications add as resource locations at runtime.
+filegroup(
+    name = "media",
+    srcs = glob(["Media/**"]),
+)
+
+# Media of the samples. Upstream's unit tests (the test module in Tests/) load
+# it through resources.cfg.
+filegroup(
+    name = "samples_media",
+    srcs = glob(["Samples/Media/**"]),
+)
+
+# The build follows the CMake configuration ROS's rviz_ogre_vendor uses:
+# shared libraries, OGRE_CONFIG_THREADS=0, OGRE_RESOURCEMANAGER_STRICT=2,
+# OGRE_CONFIG_ENABLE_ZIP=ON, the GL and GL3Plus render systems, the STBI
+# codec, and every component except Bites, HLMS and the language bindings.
+#
+# Each OGRE library is a `<name>_library` cc_library plus a `<name>`
+# cc_shared_library, which is also what OGRE loads plugins as (Codec_STBI,
+# RenderSystem_GL, RenderSystem_GL3Plus).
+
+_LINUX_DL_LINKOPTS = select({
+    "@platforms//os:linux": ["-ldl"],
+    "//conditions:default": [],
+})
+
+# Public header sets, grouped the way OGRE's `make install` lays them out under
+# include/OGRE/ (OgreMain at the top level; components, render systems and
+# plugins in subdirectories), for packages that reproduce that install tree.
+filegroup(
+    name = "OgreMain_headers",
+    srcs = glob(
+        [
+            "OgreMain/include/*.h",
+            "OgreMain/include/Threading/*.h",
+        ],
+        exclude = [
+            "OgreMain/include/OgreASTCCodec.h",
+            "OgreMain/include/OgrePVRTCCodec.h",
+        ],
+    ) + [
+        ":OgreBuildSettings_h",
+        ":OgreComponents_h",
+        ":OgreRTShaderConfig_h",
+    ],
+)
+
+[
+    filegroup(
+        name = name + "_headers",
+        srcs = glob(["Components/" + component + "/include/**/*.h"]),
+    )
+    for name, component in [
+        ("OgreMeshLodGenerator", "MeshLodGenerator"),
+        ("OgreOverlay", "Overlay"),
+        ("OgrePaging", "Paging"),
+        ("OgreProperty", "Property"),
+        ("OgreRTShaderSystem", "RTShaderSystem"),
+        ("OgreTerrain", "Terrain"),
+        ("OgreVolume", "Volume"),
+    ]
+]
+
+filegroup(
+    name = "RenderSystem_GL_headers",
+    srcs = glob(["RenderSystems/GL/include/**/*.h"]),
+)
+
+filegroup(
+    name = "RenderSystem_GL3Plus_headers",
+    srcs = glob(["RenderSystems/GL3Plus/include/**/*.h"]),
+)
+
+filegroup(
+    name = "RenderSystem_GLSupport_headers",
+    srcs = glob(["RenderSystems/GLSupport/include/*.h"]),
+)
+
+filegroup(
+    name = "Codec_STBI_headers",
+    srcs = glob(["PlugIns/STBICodec/include/*.h"]),
+)
+
+### Configuration headers
+
+expand_template(
+    name = "OgreBuildSettings_h",
+    out = "OgreMain/include/OgreBuildSettings.h",
+    substitutions = {
+        "@OGRE_VERSION_MAJOR@": "1",
+        "@OGRE_VERSION_MINOR@": "12",
+        "@OGRE_VERSION_PATCH@": "10",
+        "@OGRE_VERSION_SUFFIX@": "",
+        "@OGRE_VERSION_NAME@": "Rhagorthua",
+        "@OGRE_SET_ASSERT_MODE@": "1",
+        "#cmakedefine OGRE_STATIC_LIB": "/* #undef OGRE_STATIC_LIB */",
+        "#cmakedefine01 OGRE_DEBUG_MODE": "#define OGRE_DEBUG_MODE 0",
+        "@OGRE_RESOURCEMANAGER_STRICT@": "2",
+        "#cmakedefine OGRE_NODELESS_POSITIONING": "/* #undef OGRE_NODELESS_POSITIONING */",
+        "#cmakedefine OGRE_CONFIG_LITTLE_ENDIAN": "#define OGRE_CONFIG_LITTLE_ENDIAN",
+        "#cmakedefine OGRE_CONFIG_BIG_ENDIAN": "/* #undef OGRE_CONFIG_BIG_ENDIAN */",
+        "#cmakedefine01 OGRE_DOUBLE_PRECISION": "#define OGRE_DOUBLE_PRECISION 0",
+        "#cmakedefine01 OGRE_NODE_INHERIT_TRANSFORM": "#define OGRE_NODE_INHERIT_TRANSFORM 0",
+        "@OGRE_SET_THREADS@": "0",
+        "@OGRE_SET_THREAD_PROVIDER@": "0",
+        "#cmakedefine01 OGRE_NO_MESHLOD": "#define OGRE_NO_MESHLOD 0",
+        "#cmakedefine01 OGRE_NO_DDS_CODEC": "#define OGRE_NO_DDS_CODEC 0",
+        "#cmakedefine01 OGRE_NO_PVRTC_CODEC": "#define OGRE_NO_PVRTC_CODEC 1",
+        "#cmakedefine01 OGRE_NO_ETC_CODEC": "#define OGRE_NO_ETC_CODEC 0",
+        "#cmakedefine01 OGRE_NO_ASTC_CODEC": "#define OGRE_NO_ASTC_CODEC 1",
+        "#cmakedefine01 OGRE_NO_ZIP_ARCHIVE": "#define OGRE_NO_ZIP_ARCHIVE 0",
+        "#cmakedefine01 OGRE_NO_VIEWPORT_ORIENTATIONMODE": "#define OGRE_NO_VIEWPORT_ORIENTATIONMODE 1",
+        "#cmakedefine01 OGRE_NO_TBB_SCHEDULER": "#define OGRE_NO_TBB_SCHEDULER 0",
+        "#cmakedefine01 OGRE_PROFILING": "#define OGRE_PROFILING 0",
+        "#cmakedefine01 OGRE_NO_QUAD_BUFFER_STEREO": "#define OGRE_NO_QUAD_BUFFER_STEREO 1",
+        "#cmakedefine01 OGRE_NO_LOCALE_STRCONVERT": "#define OGRE_NO_LOCALE_STRCONVERT 0",
+    },
+    template = "CMake/Templates/OgreBuildSettings.h.in",
+)
+
+expand_template(
+    name = "OgreComponents_h",
+    out = "OgreMain/include/OgreComponents.h",
+    substitutions = {
+        "#cmakedefine OGRE_BUILD_RENDERSYSTEM_D3D9": "/* #undef OGRE_BUILD_RENDERSYSTEM_D3D9 */",
+        "#cmakedefine OGRE_BUILD_RENDERSYSTEM_D3D11": "/* #undef OGRE_BUILD_RENDERSYSTEM_D3D11 */",
+        "#cmakedefine OGRE_BUILD_RENDERSYSTEM_GL3PLUS": "#define OGRE_BUILD_RENDERSYSTEM_GL3PLUS",
+        "#cmakedefine OGRE_BUILD_RENDERSYSTEM_GLES2": "/* #undef OGRE_BUILD_RENDERSYSTEM_GLES2 */",
+        "#cmakedefine OGRE_BUILD_RENDERSYSTEM_GL\n": "#define OGRE_BUILD_RENDERSYSTEM_GL\n",
+        "#cmakedefine OGRE_BUILD_PLUGIN_BSP": "/* #undef OGRE_BUILD_PLUGIN_BSP */",
+        "#cmakedefine OGRE_BUILD_PLUGIN_OCTREE": "/* #undef OGRE_BUILD_PLUGIN_OCTREE */",
+        "#cmakedefine OGRE_BUILD_PLUGIN_PCZ": "/* #undef OGRE_BUILD_PLUGIN_PCZ */",
+        "#cmakedefine OGRE_BUILD_PLUGIN_PFX": "/* #undef OGRE_BUILD_PLUGIN_PFX */",
+        "#cmakedefine OGRE_BUILD_PLUGIN_CG": "/* #undef OGRE_BUILD_PLUGIN_CG */",
+        "#cmakedefine OGRE_BUILD_PLUGIN_STBI": "#define OGRE_BUILD_PLUGIN_STBI",
+        "#cmakedefine OGRE_BUILD_PLUGIN_FREEIMAGE": "/* #undef OGRE_BUILD_PLUGIN_FREEIMAGE */",
+        "#cmakedefine OGRE_BUILD_PLUGIN_DOT_SCENE": "/* #undef OGRE_BUILD_PLUGIN_DOT_SCENE */",
+        "#cmakedefine OGRE_BUILD_COMPONENT_PAGING": "#define OGRE_BUILD_COMPONENT_PAGING",
+        "#cmakedefine OGRE_BUILD_COMPONENT_MESHLODGENERATOR": "#define OGRE_BUILD_COMPONENT_MESHLODGENERATOR",
+        "#cmakedefine OGRE_BUILD_COMPONENT_TERRAIN": "#define OGRE_BUILD_COMPONENT_TERRAIN",
+        "#cmakedefine OGRE_BUILD_COMPONENT_VOLUME": "#define OGRE_BUILD_COMPONENT_VOLUME",
+        "#cmakedefine OGRE_BUILD_COMPONENT_PROPERTY": "#define OGRE_BUILD_COMPONENT_PROPERTY",
+        "#cmakedefine OGRE_BUILD_COMPONENT_OVERLAY": "#define OGRE_BUILD_COMPONENT_OVERLAY",
+        "#cmakedefine OGRE_BUILD_COMPONENT_RTSHADERSYSTEM": "#define OGRE_BUILD_COMPONENT_RTSHADERSYSTEM",
+        "#cmakedefine OGRE_BUILD_COMPONENT_HLMS": "/* #undef OGRE_BUILD_COMPONENT_HLMS */",
+        "#cmakedefine01 OGRE_BITES_HAVE_SDL": "#define OGRE_BITES_HAVE_SDL 0",
+    },
+    template = "CMake/Templates/OgreComponents.h.in",
+)
+
+# Included by OgreMain's OgreRenderSystem.cpp as well as by RTShaderSystem.
+expand_template(
+    name = "OgreRTShaderConfig_h",
+    out = "OgreMain/include/OgreRTShaderConfig.h",
+    substitutions = {
+        "#cmakedefine RTSHADER_SYSTEM_BUILD_CORE_SHADERS": "#define RTSHADER_SYSTEM_BUILD_CORE_SHADERS",
+        "#cmakedefine RTSHADER_SYSTEM_BUILD_EXT_SHADERS": "#define RTSHADER_SYSTEM_BUILD_EXT_SHADERS",
+    },
+    template = "CMake/Templates/OgreRTShaderConfig.h.in",
+)
+
+### OgreMain
+
+_OGRE_MAIN_HDRS = glob(
+    [
+        "OgreMain/include/*.h",
+        "OgreMain/include/Threading/*.h",
+    ],
+    exclude = [
+        "OgreMain/include/OgreASTCCodec.h",
+        "OgreMain/include/OgrePVRTCCodec.h",
+    ],
+) + [
+    ":OgreBuildSettings_h",
+    ":OgreComponents_h",
+    ":OgreRTShaderConfig_h",
+]
+
+_OGRE_MAIN_COPTS = select({
+    "@platforms//os:osx": [
+        "-Wno-deprecated-declarations",
+        "-Wno-implicit-const-int-float-conversion",
+        "-Wno-inconsistent-missing-override",
+    ],
+    "//conditions:default": [],
+})
+
+objc_library(
+    name = "OgreMain_osx_objc",
+    hdrs = _OGRE_MAIN_HDRS + glob([
+        "OgreMain/src/*.h",
+        "OgreMain/src/OSX/*.h",
+    ]),
+    copts = _OGRE_MAIN_COPTS + [
+        "-fno-objc-arc",
+        "-std=c++17",
+    ],
+    includes = [
+        "OgreMain/include",
+        "OgreMain/include/Threading",
+        "OgreMain/src",
+        "OgreMain/src/OSX",
+    ],
+    non_arc_srcs = ["OgreMain/src/OSX/macUtils.mm"],
+    sdk_frameworks = [
+        "CoreFoundation",
+        "Foundation",
+    ],
+    tags = ["manual"],
+    target_compatible_with = ["@platforms//os:osx"],
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "OgreMain_library",
+    srcs = glob(
+        [
+            "OgreMain/src/*.cpp",
+            "OgreMain/src/*.h",
+        ],
+        exclude = [
+            "OgreMain/src/OgreASTCCodec.cpp",
+            "OgreMain/src/OgreFileSystemLayerNoOp.cpp",
+            "OgreMain/src/OgrePVRTCCodec.cpp",
+        ],
+    ) + [
+        "OgreMain/src/Threading/OgreDefaultWorkQueueStandard.cpp",
+    ] + select({
+        "@platforms//os:osx": glob([
+            "OgreMain/src/OSX/*.cpp",
+            "OgreMain/src/OSX/*.h",
+        ]),
+        "//conditions:default": glob(["OgreMain/src/GLX/*.cpp"]),
+    }),
+    hdrs = _OGRE_MAIN_HDRS,
+    copts = _OGRE_MAIN_COPTS,
+    implementation_deps = [
+        "@zlib",
+        "@zziplib",
+    ],
+    includes = [
+        "OgreMain/include",
+        "OgreMain/include/Threading",
+        "OgreMain/src",
+    ] + select({
+        "@platforms//os:osx": ["OgreMain/src/OSX"],
+        "//conditions:default": [],
+    }),
+    linkopts = select({
+        "@platforms//os:linux": [
+            "-ldl",
+            "-lpthread",
+        ],
+        "@platforms//os:osx": [
+            "-framework",
+            "CoreFoundation",
+            "-framework",
+            "Foundation",
+        ],
+        "//conditions:default": [],
+    }),
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "@platforms//os:osx": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = select({
+        "@platforms//os:osx": [":OgreMain_osx_objc"],
+        "//conditions:default": [],
+    }),
+)
+
+# zlib is linked into OgreMain (for OgreDeflate and the zip archive) and
+# exported from it, so that the libraries depending on OgreMain that also need
+# zlib (Codec_STBI, and OgreOverlay through freetype) do not link a second copy.
+cc_shared_library(
+    name = "OgreMain",
+    exports_filter = [":OgreMain_library"] + select({
+        "@platforms//os:osx": [":OgreMain_osx_objc"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":OgreMain_library",
+        "@zlib",
+    ],
+)
+
+### Component: MeshLodGenerator
+
+OGRE_MESH_LOD_GENERATOR_DEPS = {
+    ":OgreMain": ":OgreMain_library",
+}
+
+cc_library(
+    name = "OgreMeshLodGenerator_library",
+    srcs = glob([
+        "Components/MeshLodGenerator/src/*.cpp",
+        "Components/MeshLodGenerator/src/*.h",
+    ]),
+    hdrs = glob(["Components/MeshLodGenerator/include/*.h"]),
+    includes = ["Components/MeshLodGenerator/include"],
+    deps = OGRE_MESH_LOD_GENERATOR_DEPS.values(),
+)
+
+cc_shared_library(
+    name = "OgreMeshLodGenerator",
+    dynamic_deps = OGRE_MESH_LOD_GENERATOR_DEPS.keys(),
+    exports_filter = [":OgreMeshLodGenerator_library"],
+    deps = [":OgreMeshLodGenerator_library"],
+)
+
+### Component: Paging
+
+OGRE_PAGING_DEPS = {
+    ":OgreMain": ":OgreMain_library",
+}
+
+cc_library(
+    name = "OgrePaging_library",
+    srcs = glob(["Components/Paging/src/*.cpp"]),
+    hdrs = glob(["Components/Paging/include/*.h"]),
+    includes = ["Components/Paging/include"],
+    deps = OGRE_PAGING_DEPS.values(),
+)
+
+cc_shared_library(
+    name = "OgrePaging",
+    dynamic_deps = OGRE_PAGING_DEPS.keys(),
+    exports_filter = [":OgrePaging_library"],
+    deps = [":OgrePaging_library"],
+)
+
+### Component: Property
+
+OGRE_PROPERTY_DEPS = {
+    ":OgreMain": ":OgreMain_library",
+}
+
+cc_library(
+    name = "OgreProperty_library",
+    srcs = glob(["Components/Property/src/*.cpp"]),
+    hdrs = glob(["Components/Property/include/*.h"]),
+    includes = ["Components/Property/include"],
+    deps = OGRE_PROPERTY_DEPS.values(),
+)
+
+cc_shared_library(
+    name = "OgreProperty",
+    dynamic_deps = OGRE_PROPERTY_DEPS.keys(),
+    exports_filter = [":OgreProperty_library"],
+    deps = [":OgreProperty_library"],
+)
+
+### Component: RTShaderSystem
+
+OGRE_RT_SHADER_SYSTEM_DEPS = {
+    ":OgreMain": ":OgreMain_library",
+}
+
+cc_library(
+    name = "OgreRTShaderSystem_library",
+    srcs = glob([
+        "Components/RTShaderSystem/src/*.cpp",
+        "Components/RTShaderSystem/src/*.h",
+    ]),
+    hdrs = glob(["Components/RTShaderSystem/include/*.h"]),
+    includes = ["Components/RTShaderSystem/include"],
+    deps = OGRE_RT_SHADER_SYSTEM_DEPS.values(),
+)
+
+cc_shared_library(
+    name = "OgreRTShaderSystem",
+    dynamic_deps = OGRE_RT_SHADER_SYSTEM_DEPS.keys(),
+    exports_filter = [":OgreRTShaderSystem_library"],
+    deps = [":OgreRTShaderSystem_library"],
+)
+
+### Component: Terrain
+
+OGRE_TERRAIN_DEPS = {
+    ":OgreMain": ":OgreMain_library",
+    ":OgrePaging": ":OgrePaging_library",
+}
+
+cc_library(
+    name = "OgreTerrain_library",
+    srcs = glob([
+        "Components/Terrain/src/*.cpp",
+        "Components/Terrain/src/*.h",
+    ]),
+    hdrs = glob(["Components/Terrain/include/*.h"]),
+    includes = ["Components/Terrain/include"],
+    deps = OGRE_TERRAIN_DEPS.values(),
+)
+
+cc_shared_library(
+    name = "OgreTerrain",
+    dynamic_deps = OGRE_TERRAIN_DEPS.keys(),
+    exports_filter = [":OgreTerrain_library"],
+    deps = [":OgreTerrain_library"],
+)
+
+### Component: Volume
+
+OGRE_VOLUME_DEPS = {
+    ":OgreMain": ":OgreMain_library",
+}
+
+cc_library(
+    name = "OgreVolume_library",
+    srcs = glob(["Components/Volume/src/*.cpp"]),
+    hdrs = glob(["Components/Volume/include/*.h"]),
+    includes = ["Components/Volume/include"],
+    deps = OGRE_VOLUME_DEPS.values(),
+)
+
+cc_shared_library(
+    name = "OgreVolume",
+    dynamic_deps = OGRE_VOLUME_DEPS.keys(),
+    exports_filter = [":OgreVolume_library"],
+    deps = [":OgreVolume_library"],
+)
+
+### Component: Overlay (with the Dear ImGui overlay)
+
+OGRE_OVERLAY_DEPS = {
+    ":OgreMain": ":OgreMain_library",
+}
+
+cc_library(
+    name = "OgreOverlay_library",
+    srcs = glob([
+        "Components/Overlay/src/*.cpp",
+        "Components/Overlay/src/*.h",
+    ]),
+    hdrs = glob(["Components/Overlay/include/*.h"]),
+    implementation_deps = ["@freetype"],
+    includes = ["Components/Overlay/include"],
+    deps = OGRE_OVERLAY_DEPS.values() + ["@imgui"],
+)
+
+cc_shared_library(
+    name = "OgreOverlay",
+    dynamic_deps = OGRE_OVERLAY_DEPS.keys(),
+    exports_filter = [
+        ":OgreOverlay_library",
+        "@imgui",
+    ],
+    deps = [":OgreOverlay_library"],
+)
+
+### Render systems
+
+# Header-only target for code that talks to OGRE's GL render system directly
+# (rviz_rendering does): the GL headers OGRE ships (including its bundled GLEW)
+# plus the system GL headers they include.
+cc_library(
+    name = "RenderSystems",
+    hdrs = glob([
+        "RenderSystems/GL/include/**/*.h",
+        "RenderSystems/GL/src/GLSL/include/**/*.h",
+    ]),
+    defines = [
+        # OGRE's bundled GLEW is compiled into RenderSystem_GL; GLEW_NO_GLU
+        # keeps glew.h from including <GL/glu.h>, which OGRE never uses.
+        "GLEW_NO_GLU",
+        "GLEW_STATIC",
+    ],
+    includes = [
+        "RenderSystems/GL/include",
+        "RenderSystems/GL/include/GL",
+        "RenderSystems/GL/src",
+    ],
+    deps = [
+        "@egl-registry//:EGL_headers",
+        "@opengl-registry//:OpenGL_headers",
+    ] + select({
+        "@platforms//os:linux": [
+            ":glx_headers",
+            "@libx11",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+# GL/glx.h is no longer part of the Khronos OpenGL-Registry; it is vendored
+# from Mesa, like the gl.h that @opengl-registry vendors. glxext.h still comes
+# from @opengl-registry.
+cc_library(
+    name = "glx_headers",
+    hdrs = ["glx.h"],
+    include_prefix = "GL",
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:private"],
+)
+
+objc_library(
+    name = "RenderSystem_GLSupport_osx_objc",
+    hdrs = glob([
+        "RenderSystems/GLSupport/include/*.h",
+        "RenderSystems/GLSupport/include/GLSL/*.h",
+        "RenderSystems/GLSupport/include/OSX/*.h",
+    ]),
+    copts = [
+        "-fno-objc-arc",
+        "-Wno-cast-qual",
+        "-Wno-deprecated-declarations",
+    ],
+    includes = [
+        "RenderSystems/GLSupport/include",
+        "RenderSystems/GLSupport/include/GLSL",
+        "RenderSystems/GLSupport/include/OSX",
+    ],
+    non_arc_srcs = glob(["RenderSystems/GLSupport/src/OSX/*.mm"]),
+    sdk_frameworks = [
+        "AppKit",
+        "Cocoa",
+        "CoreGraphics",
+        "Foundation",
+        "OpenGL",
+        "QuartzCore",
+    ],
+    tags = ["manual"],
+    target_compatible_with = ["@platforms//os:osx"],
+    visibility = ["//visibility:private"],
+    deps = [
+        ":OgreMain_library",
+        "@opengl-registry//:OpenGL_headers",
+    ],
+)
+
+# Linked statically into both GL render system plugins, as upstream does.
+cc_library(
+    name = "RenderSystem_GLSupport",
+    srcs = glob([
+        "RenderSystems/GLSupport/src/*.cpp",
+        "RenderSystems/GLSupport/src/GLSL/*.cpp",
+    ]) + select({
+        "@platforms//os:linux": glob(["RenderSystems/GLSupport/src/GLX/*.cpp"]),
+        "//conditions:default": [],
+    }),
+    hdrs = glob([
+        "RenderSystems/GLSupport/include/*.h",
+        "RenderSystems/GLSupport/include/GLSL/*.h",
+    ]) + select({
+        "@platforms//os:linux": glob(["RenderSystems/GLSupport/include/GLX/*.h"]),
+        "@platforms//os:osx": glob(["RenderSystems/GLSupport/include/OSX/*.h"]),
+        "//conditions:default": [],
+    }),
+    copts = select({
+        "@platforms//os:osx": ["-Wno-deprecated-declarations"],
+        "//conditions:default": [],
+    }),
+    implementation_deps = ["@opengl-registry//:OpenGL_headers"],
+    includes = [
+        "RenderSystems/GLSupport/include",
+        "RenderSystems/GLSupport/include/GLSL",
+    ] + select({
+        "@platforms//os:linux": ["RenderSystems/GLSupport/include/GLX"],
+        "@platforms//os:osx": ["RenderSystems/GLSupport/include/OSX"],
+        "//conditions:default": [],
+    }),
+    linkopts = select({
+        "@platforms//os:osx": [
+            "-framework",
+            "AppKit",
+            "-framework",
+            "Cocoa",
+            "-framework",
+            "CoreGraphics",
+            "-framework",
+            "Foundation",
+            "-framework",
+            "OpenGL",
+            "-framework",
+            "QuartzCore",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [":OgreMain_library"] + select({
+        "@platforms//os:linux": [
+            ":glx_headers",
+            "@libx11",
+            "@libxcb",
+            "@libxrandr",
+        ],
+        "@platforms//os:osx": [":RenderSystem_GLSupport_osx_objc"],
+        "//conditions:default": [],
+    }),
+)
+
+### RenderSystem: GL
+
+OGRE_RENDERSYSTEM_GL_DEPS = {
+    ":OgreMain": ":OgreMain_library",
+}
+
+cc_library(
+    name = "RenderSystem_GL_library",
+    srcs = glob(
+        [
+            "RenderSystems/GL/src/*.cpp",
+            "RenderSystems/GL/src/GLSL/include/*.h",
+            "RenderSystems/GL/src/GLSL/src/*.cpp",
+            "RenderSystems/GL/src/atifs/include/*.h",
+            "RenderSystems/GL/src/atifs/src/*.cpp",
+            "RenderSystems/GL/src/nvparse/*.cpp",
+            "RenderSystems/GL/src/nvparse/*.h",
+        ],
+        exclude = ["RenderSystems/GL/src/nvparse/ps1.0__test_main.cpp"],
+    ) + ["RenderSystems/GL/src/glew.c"],
+    hdrs = glob(["RenderSystems/GL/include/**/*.h"]),
+    defines = [
+        "GLEW_NO_GLU",
+        "GLEW_STATIC",
+    ],
+    includes = [
+        "RenderSystems/GL/include",
+        "RenderSystems/GL/src/GLSL/include",
+        "RenderSystems/GL/src/atifs/include",
+        "RenderSystems/GL/src/nvparse",
+    ],
+    linkopts = _LINUX_DL_LINKOPTS,
+    local_defines = ["YY_NEVER_INTERACTIVE"],
+    deps = OGRE_RENDERSYSTEM_GL_DEPS.values() + [
+        ":RenderSystem_GLSupport",
+        "@opengl-registry//:OpenGL_headers",
+    ],
+)
+
+cc_shared_library(
+    name = "RenderSystem_GL",
+    dynamic_deps = OGRE_RENDERSYSTEM_GL_DEPS.keys(),
+    exports_filter = [
+        ":RenderSystem_GL_library",
+        ":RenderSystem_GLSupport",
+    ] + select({
+        "@platforms//os:osx": [":RenderSystem_GLSupport_osx_objc"],
+        "//conditions:default": [],
+    }),
+    deps = [":RenderSystem_GL_library"],
+)
+
+### RenderSystem: GL3Plus
+
+OGRE_RENDERSYSTEM_GL3PLUS_DEPS = {
+    ":OgreMain": ":OgreMain_library",
+}
+
+cc_library(
+    name = "RenderSystem_GL3Plus_library",
+    srcs = glob([
+        "RenderSystems/GL3Plus/src/*.cpp",
+        "RenderSystems/GL3Plus/src/GLSL/include/*.h",
+        "RenderSystems/GL3Plus/src/GLSL/src/*.cpp",
+    ]) + ["RenderSystems/GL3Plus/src/gl3w.c"],
+    hdrs = glob(["RenderSystems/GL3Plus/include/**/*.h"]),
+    includes = [
+        "RenderSystems/GL3Plus/include",
+        "RenderSystems/GL3Plus/src/GLSL/include",
+    ],
+    linkopts = _LINUX_DL_LINKOPTS,
+    deps = OGRE_RENDERSYSTEM_GL3PLUS_DEPS.values() + [
+        ":RenderSystem_GLSupport",
+    ],
+)
+
+cc_shared_library(
+    name = "RenderSystem_GL3Plus",
+    dynamic_deps = OGRE_RENDERSYSTEM_GL3PLUS_DEPS.keys(),
+    exports_filter = [
+        ":RenderSystem_GL3Plus_library",
+        ":RenderSystem_GLSupport",
+    ] + select({
+        "@platforms//os:osx": [":RenderSystem_GLSupport_osx_objc"],
+        "//conditions:default": [],
+    }),
+    deps = [":RenderSystem_GL3Plus_library"],
+)
+
+### PlugIn: STBICodec
+
+OGRE_CODEC_STBI_DEPS = {
+    ":OgreMain": ":OgreMain_library",
+}
+
+cc_library(
+    name = "Codec_STBI_library",
+    srcs = glob([
+        "PlugIns/STBICodec/src/*.cpp",
+        "PlugIns/STBICodec/src/stbi/*.h",
+    ]),
+    hdrs = glob(["PlugIns/STBICodec/include/*.h"]),
+    implementation_deps = ["@zlib"],
+    includes = ["PlugIns/STBICodec/include"],
+    deps = OGRE_CODEC_STBI_DEPS.values(),
+)
+
+cc_shared_library(
+    name = "Codec_STBI",
+    dynamic_deps = OGRE_CODEC_STBI_DEPS.keys(),
+    exports_filter = [":Codec_STBI_library"],
+    deps = [":Codec_STBI_library"],
+)

@@ -1,0 +1,25 @@
+{
+    "url": "https://github.com/OGRECave/ogre/archive/refs/tags/v1.12.10.tar.gz",
+    "integrity": "sha256-1PeR5sTfkwfvuOTpJlIjP5SOoG1eIuBl8pnJq4/Fz6Q=",
+    "strip_prefix": "ogre-1.12.10",
+    "patch_strip": 1,
+    "patches": {
+        "remove_binary_function.patch": "sha256-6IromilHC8/KV/JzwpAy2SLEm34DrEypd8WS95W0jEI=",
+        "utfstring_char16_char32.patch": "sha256-yMwmeF93UlnqAky/Y1gElHl40SWb3/ZnAFIwDWV5joM="
+    },
+    "overlay": {
+        ".bazelignore": "sha256-XBd1RnSwkjNWXGWQO401TsPMofYazBXxvfamRCpjlcc=",
+        "BUILD.bazel": "sha256-ACosClLt3AGV0+5+Y+2fj7gZ00SW0VkuI5APtsqZyiI=",
+        "Components/Overlay/include/OgreOverlayPrerequisites.h": "sha256-tnhOFq05fvTI8rlyLvGisSg8Cdj0yOM5t0w8f+t624M=",
+        "Components/Property/include/OgrePropertyPrerequisites.h": "sha256-xNtImWLowmC4DlS/E5Etw+kQURGBCrHmOqF2Mu9d3Y4=",
+        "Components/RTShaderSystem/include/OgreRTShaderExports.h": "sha256-zy8rcD1vgcA5GmWz3OSdVKklPjkGk8PnWUjQHXPLxEs=",
+        "Components/Volume/include/OgreVolumePrerequisites.h": "sha256-Bc6VprNscgH0e/e0t8Q7Op6/NkTSoEWc+orIPXmvZqg=",
+        "MODULE.bazel": "sha256-ucLfoYSQrGQyS6KXbgkbAL7BMa1TqtQiJD4uJA14maw=",
+        "OgreMain/include/OgreExports.h": "sha256-svvOA4A4vECOz3cd1Djk6266eDdupwj7fA7++j+3ajw=",
+        "PlugIns/STBICodec/include/OgreSTBICodecExports.h": "sha256-SPIixXbWEh5aZPh9KIRWnegNjW3SsG2XCZt8ctCs9+M=",
+        "RenderSystems/GLSupport/include/OgreGLSupportPrerequisites.h": "sha256-rz51IGGmrYEd9zkaIKA6V0n8ZrFGtaVlhdMNd0qg8Tc=",
+        "Tests/BUILD.bazel": "sha256-s+7iyoOPz7VNKS6z2+gJw95fUBs6uFFATBv5sivYcJA=",
+        "Tests/MODULE.bazel": "sha256-2Wq1WlhEy5XsFUEGEvZ3SgLekqZd3d9WU1UF4OszKxY=",
+        "glx.h": "sha256-JTBor46mw6jxBD0XRFfQA6SOz0C+1mY/TSHrDg1WbeA="
+    }
+}

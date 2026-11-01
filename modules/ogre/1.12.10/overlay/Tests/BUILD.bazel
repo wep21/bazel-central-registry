@@ -1,0 +1,133 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
+# Upstream's unit tests (Test_Ogre), one cc_test per source file. Not ported:
+# - OgreMain/src/General.cpp, Components/PageCoreTests.cpp and
+#   Components/TerrainTests.cpp use OgreBites, which this module does not build.
+# - OgreMain/src/UseCustomCapabilitiesTests.cpp loads the GL render system and
+#   needs a display (upstream's macOS CI excludes it too).
+
+# resources.cfg as upstream configures it for its build tree, with the media
+# directories given relative to the working directory of the tests (this
+# module's runfiles directory). Tests find it through
+# Ogre::FileSystemLayer::getConfigFilePath().
+genrule(
+    name = "resources_cfg",
+    srcs = [
+        "@ogre//:CMake/Templates/resources.cfg.in",
+        "@ogre//:media",
+        "@ogre//:samples_media",
+        ":media",
+    ],
+    outs = ["resources.cfg"],
+    cmd = """
+dir() {
+  for f in $$2; do
+    echo "../$${f%%/$$1/*}/$$1"
+    return
+  done
+}
+sed \\
+  -e "s#@OGRE_CORE_MEDIA_DIR@#$$(dir Media "$(rlocationpaths @ogre//:media)")#" \\
+  -e "s#@OGRE_MEDIA_DIR_REL@#$$(dir Samples/Media "$(rlocationpaths @ogre//:samples_media)")#" \\
+  -e "s#@OGRE_TEST_MEDIA_DIR_REL@#$$(dir Media "$(rlocationpaths :media)")#" \\
+  $(execpath @ogre//:CMake/Templates/resources.cfg.in) > $@
+""",
+)
+
+filegroup(
+    name = "media",
+    srcs = glob(["Media/**"]),
+)
+
+_RESOURCES = [
+    ":media",
+    ":resources_cfg",
+    "@ogre//:media",
+    "@ogre//:samples_media",
+]
+
+cc_library(
+    name = "test_main",
+    testonly = True,
+    srcs = ["src/main.cpp"],
+    deps = [
+        "@googletest//:gtest",
+        "@ogre//:OgreMain_library",
+    ],
+)
+
+cc_library(
+    name = "test_support",
+    testonly = True,
+    srcs = ["OgreMain/src/RootWithoutRenderSystemFixture.cpp"],
+    hdrs = glob(["OgreMain/include/*.h"]),
+    includes = ["OgreMain/include"],
+    deps = [
+        "@googletest//:gtest",
+        "@ogre//:OgreMain_library",
+    ],
+)
+
+[
+    cc_test(
+        name = src.rpartition("/")[2].removesuffix(".cpp"),
+        srcs = [src],
+        data = data,
+        deps = [
+            ":test_main",
+            ":test_support",
+            "@googletest//:gtest",
+            "@ogre//:OgreMain_library",
+        ] + deps,
+    )
+    for src, deps, data in [
+        ("OgreMain/src/BitwiseTests.cpp", [], []),
+        ("OgreMain/src/DualQuaternionTests.cpp", [], []),
+        ("OgreMain/src/EdgeBuilderTests.cpp", [], []),
+        ("OgreMain/src/FileSystemArchiveTests.cpp", [], _RESOURCES),
+        ("OgreMain/src/InstancingTests.cpp", [], _RESOURCES),
+        ("OgreMain/src/MeshSerializerTests.cpp", [], _RESOURCES),
+        (
+            "OgreMain/src/MeshWithoutIndexDataTests.cpp",
+            ["@ogre//:OgreMeshLodGenerator_library"],
+            [],
+        ),
+        ("OgreMain/src/PixelFormatTests.cpp", [], []),
+        ("OgreMain/src/QuaternionTests.cpp", [], []),
+        ("OgreMain/src/RadixSort.cpp", [], []),
+        ("OgreMain/src/RenderSystemCapabilitiesTests.cpp", [], _RESOURCES),
+        ("OgreMain/src/ResourceLocationPriorityTest.cpp", [], _RESOURCES),
+        ("OgreMain/src/StreamSerialiserTests.cpp", [], []),
+        ("OgreMain/src/StringTests.cpp", [], []),
+        ("OgreMain/src/VectorTests.cpp", [], []),
+        ("OgreMain/src/ZipArchiveTests.cpp", [], _RESOURCES),
+        (
+            "Components/MeshLodTests.cpp",
+            ["@ogre//:OgreMeshLodGenerator_library"],
+            _RESOURCES,
+        ),
+        (
+            "Components/PropertyTests.cpp",
+            ["@ogre//:OgreProperty_library"],
+            [],
+        ),
+        (
+            "Components/RTShaderSystemTests.cpp",
+            ["@ogre//:OgreRTShaderSystem_library"],
+            _RESOURCES,
+        ),
+    ]
+]
+
+# Only the GLSL preprocessor of GLSupport is under test; link statically so
+# that the GLX parts of the library (which need libGL) are left out.
+cc_test(
+    name = "GLSLTests",
+    srcs = ["RenderSystems/GLSupport/GLSLTests.cpp"],
+    linkstatic = True,
+    deps = [
+        ":test_main",
+        "@googletest//:gtest",
+        "@ogre//:RenderSystem_GLSupport",
+    ],
+)
