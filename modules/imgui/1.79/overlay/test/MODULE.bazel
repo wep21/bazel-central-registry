@@ -1,0 +1,7 @@
+bazel_dep(name = "imgui")
+local_path_override(
+    module_name = "imgui",
+    path = "..",
+)
+
+bazel_dep(name = "rules_cc", version = "0.2.27")

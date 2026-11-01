@@ -1,0 +1,75 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
+# examples/example_null runs the library headless (font atlas, 20 frames of
+# widgets and the demo window). Upstream CI builds it in the configurations
+# below (.github/workflows/build.yml); here they are also run.
+
+# "Build example_null (freetype)": the library as shipped by this module,
+# including misc/freetype and misc/cpp.
+cc_test(
+    name = "example_null",
+    srcs = ["@imgui//:examples/example_null/main.cpp"],
+    deps = ["@imgui"],
+)
+
+cc_library(
+    name = "vec_class_extra",
+    testonly = True,
+    hdrs = ["user_config/vec_class_extra.h"],
+    includes = ["user_config"],
+)
+
+# The single-file builds of upstream CI, each with one set of imconfig.h
+# options.
+[
+    cc_test(
+        name = "example_null_" + name,
+        srcs = [
+            "@imgui//:examples/example_null/main.cpp",
+            "@imgui//:srcs",
+        ],
+        local_defines = defines,
+        deps = ["@imgui//:headers"] + deps,
+    )
+    for name, defines, deps in [
+        ("default", [], []),
+        (
+            "wchar32",
+            ["IMGUI_USE_WCHAR32"],
+            [],
+        ),
+        (
+            "large_imdrawidx",
+            ["ImDrawIdx=unsigned"],
+            [],
+        ),
+        (
+            "disable_obsolete_functions",
+            ["IMGUI_DISABLE_OBSOLETE_FUNCTIONS"],
+            [],
+        ),
+        (
+            "disable_demo_and_metrics_windows",
+            [
+                "IMGUI_DISABLE_DEMO_WINDOWS",
+                "IMGUI_DISABLE_METRICS_WINDOW",
+            ],
+            [],
+        ),
+        (
+            "disable_file_functions",
+            ["IMGUI_DISABLE_FILE_FUNCTIONS"],
+            [],
+        ),
+        (
+            "bgra_packed_color",
+            ["IMGUI_USE_BGRA_PACKED_COLOR"],
+            [],
+        ),
+        (
+            "vec_class_extra",
+            ["IMGUI_USER_CONFIG=<vec_class_extra.h>"],
+            [":vec_class_extra"],
+        ),
+    ]
+]

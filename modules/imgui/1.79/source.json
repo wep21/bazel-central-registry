@@ -1,0 +1,13 @@
+{
+    "url": "https://github.com/ocornut/imgui/archive/refs/tags/v1.79.tar.gz",
+    "integrity": "sha256-8ZCFAfbcbbik1XLCklmEf2+IJoSxBIjTqNLaMXRM0KQ=",
+    "strip_prefix": "imgui-1.79",
+    "overlay": {
+        ".bazelignore": "sha256-8sobtsfpB9Btr+Roflefznazfk6Tt2BQItpS5szCb9I=",
+        "BUILD.bazel": "sha256-vT9TXrXHxRmV8AGyLQosZ0d07uswC58vFztkzX2hlLo=",
+        "MODULE.bazel": "sha256-HF4UklUcNnOVnZxTEeDQJeoFg9liXhe1iIaW0Paawlo=",
+        "test/BUILD.bazel": "sha256-/8h/LBkBVOnlLJ3kRmBPHfiOLVWEzDs12I0S9GO8Pv0=",
+        "test/MODULE.bazel": "sha256-/ESFUdQbJMmhLamulQ/cZss1Ln6NQtkcjGpF3DYCL0g=",
+        "test/user_config/vec_class_extra.h": "sha256-oZ6mi6crTNbsB6WVPQdn1pRwbw+Io64ls0NrNoeOe/M="
+    }
+}

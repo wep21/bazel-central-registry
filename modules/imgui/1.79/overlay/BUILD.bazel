@@ -1,0 +1,84 @@
+load("@package_metadata//licenses/rules:license.bzl", "license")
+load("@package_metadata//purl:purl.bzl", "purl")
+load("@package_metadata//rules:package_metadata.bzl", "package_metadata")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_package_metadata = [":package_metadata"])
+
+license(
+    name = "license",
+    kind = "@package_metadata//licenses/spdx:MIT",
+    text = "LICENSE.txt",
+    visibility = ["//visibility:public"],
+)
+
+package_metadata(
+    name = "package_metadata",
+    attributes = [":license"],
+    purl = purl.bazel(
+        module_name(),
+        module_version(),
+    ),
+    visibility = ["//visibility:public"],
+)
+
+exports_files([
+    "LICENSE.txt",
+    "examples/example_null/main.cpp",
+])
+
+# Core sources, without any configuration defines. Exposed so that the test
+# module can rebuild the core with the imconfig.h options upstream CI checks.
+filegroup(
+    name = "srcs",
+    srcs = [
+        "imgui.cpp",
+        "imgui_demo.cpp",
+        "imgui_draw.cpp",
+        "imgui_widgets.cpp",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "headers",
+    hdrs = [
+        "imconfig.h",
+        "imgui.h",
+        "imgui_internal.h",
+        "imstb_rectpack.h",
+        "imstb_textedit.h",
+        "imstb_truetype.h",
+    ],
+    include_prefix = "imgui",
+    includes = ["."],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "imgui",
+    srcs = [
+        "misc/cpp/imgui_stdlib.cpp",
+        "misc/freetype/imgui_freetype.cpp",
+        ":srcs",
+    ],
+    hdrs = [
+        "misc/cpp/imgui_stdlib.h",
+        "misc/freetype/imgui_freetype.h",
+    ],
+    defines = [
+        "IMGUI_DEFINE_MATH_OPERATORS",
+        "IMGUI_USE_WCHAR32",
+    ],
+    include_prefix = "imgui",
+    includes = [
+        ".",
+        "misc/cpp",
+        "misc/freetype",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":headers",
+        "@freetype",
+    ],
+)
